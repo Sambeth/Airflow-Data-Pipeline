@@ -11,14 +11,14 @@ default_args = {
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
     'catchup': False,
-    'depends_on_past': False,
-    'schedule_interval': '@hourly'
+    'depends_on_past': False
 }
 
 dag = DAG(
     'create_tables',
     default_args=default_args,
-    description='Prepare redshift for ETL by droping and creating tables'
+    description='Prepare redshift for ETL by droping and creating tables',
+    schedule_interval='@hourly'
 )
 
 start_operator = DummyOperator(task_id='Begin_execution',  dag=dag)

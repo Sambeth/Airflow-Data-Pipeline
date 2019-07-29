@@ -12,13 +12,13 @@ default_args = {
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
     'catchup': False,
-    'depends_on_past': False,
-    'schedule_interval': '@hourly'
+    'depends_on_past': False
 }
 
 dag = DAG(
     'etl_process',
-    default_args=default_args
+    default_args=default_args,
+    schedule_interval='@hourly'
 )
 
 start_operator = DummyOperator(task_id='Begin_execution', dag=dag)
@@ -53,42 +53,24 @@ load_songplays_table = LoadFactOperator(
     dag=dag
 )
 
-load_user_dimension_table = LoadDimensionOperator(
-    task_id='load_user_dim_table',
-    redshift_conn_id="redshift",
-    table="users",
-    data_source=SqlQueries.user_table_insert,
-    dag=dag
-)
+dim_tables_and_sources = [
+    ("users", SqlQueries.user_table_insert),
+    ("songs", SqlQueries.song_table_insert),
+    ("artists", SqlQueries.artist_table_insert),
+    ("time", SqlQueries.time_table_insert),
+]
 
-load_song_dimension_table = LoadDimensionOperator(
-    task_id='load_song_dim_table',
+load_dimension_tables = LoadDimensionOperator(
+    task_id='load_dim_tables',
     redshift_conn_id="redshift",
-    table="songs",
-    data_source=SqlQueries.song_table_insert,
-    dag=dag
-)
-
-load_artist_dimension_table = LoadDimensionOperator(
-    task_id='load_artist_dim_table',
-    redshift_conn_id="redshift",
-    table="artists",
-    data_source=SqlQueries.artist_table_insert,
-    dag=dag
-)
-
-load_time_dimension_table = LoadDimensionOperator(
-    task_id='load_time_dim_table',
-    redshift_conn_id="redshift",
-    table="time",
-    data_source=SqlQueries.time_table_insert,
+    tables=dim_tables_and_sources,
     dag=dag
 )
 
 run_quality_checks = DataQualityOperator(
     task_id='run_data_quality_checks',
     redshift_conn_id="redshift",
-    table="time",
+    tables=dim_tables_and_sources,
     dag=dag
 )
 
@@ -98,12 +80,6 @@ start_operator >> stage_events_to_redshift
 start_operator >> stage_songs_to_redshift
 stage_events_to_redshift >> load_songplays_table
 stage_songs_to_redshift >> load_songplays_table
-load_songplays_table >> load_user_dimension_table
-load_songplays_table >> load_song_dimension_table
-load_songplays_table >> load_artist_dimension_table
-load_songplays_table >> load_time_dimension_table
-load_user_dimension_table >> run_quality_checks
-load_song_dimension_table >> run_quality_checks
-load_artist_dimension_table >> run_quality_checks
-load_time_dimension_table >> run_quality_checks
+load_songplays_table >> load_dimension_tables
+load_dimension_tables >> run_quality_checks
 run_quality_checks >> end_operator

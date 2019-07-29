@@ -15,9 +15,8 @@ class LoadDimensionOperator(BaseOperator):
     @apply_defaults
     def __init__(self,
                  redshift_conn_id="",
-                 table="",
+                 tables=[],
                  truncate=False,
-                 data_source="",
                  *args, **kwargs):
         """
         :param redshift_conn_id:
@@ -30,20 +29,21 @@ class LoadDimensionOperator(BaseOperator):
 
         super(LoadDimensionOperator, self).__init__(*args, **kwargs)
         self.redshift_conn_id = redshift_conn_id
-        self.table = table
+        self.tables = tables
         self.truncate = truncate
-        self.data_source = data_source
 
     def execute(self, context):
         redshift = PostgresHook(self.redshift_conn_id)
 
         if self.truncate:
-            self.log.info(f"Truncating {self.table} table")
-            redshift.run(f"DELETE FROM {self.table}")
+            for table, _ in self.tables:
+                self.log.info(f"Truncating {table} table")
+                redshift.run(f"DELETE FROM {table}")
 
-        sql_query = LoadDimensionOperator.sql_format.format(
-            self.table,
-            self.data_source
-        )
-        self.log.info(f"Running {self.sql_query}")
-        redshift.run(sql_query)
+        for table, source in self.tables:
+            sql_query = LoadDimensionOperator.sql_format.format(
+                table,
+                source
+            )
+            self.log.info(f"Running {self.sql_query}")
+            redshift.run(sql_query)
