@@ -6,7 +6,7 @@ from operators import (StageToRedshiftOperator, LoadFactOperator,
                        LoadDimensionOperator, DataQualityOperator)
 
 default_args = {
-    'owner': 'fs',
+    'owner': 'airflow',
     'start_date': datetime(2019, 7, 29),
     'email_on_retry': False,
     'retries': 3,
@@ -17,7 +17,7 @@ default_args = {
 }
 
 dag = DAG(
-    'ETL Process to Redshift',
+    'etl_process',
     default_args=default_args
 )
 
@@ -35,13 +35,13 @@ stage_events_to_redshift = StageToRedshiftOperator(
 )
 
 stage_songs_to_redshift = StageToRedshiftOperator(
+    task_id='stage_songs',
     redshift_conn_id="redshift",
     aws_credentials_id="aws_credentials",
     table="staging_songs",
     s3_bucket='udacity-dend',
     s3_key="song_data",
     copy_options=["json 'auto' compupdate off region 'us-west-2'"],
-    task_id='Stage_songs',
     dag=dag
 )
 

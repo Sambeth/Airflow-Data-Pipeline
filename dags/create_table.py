@@ -5,7 +5,7 @@ from airflow.operators.postgres_operator import PostgresOperator
 import sql_statements
 
 default_args = {
-    'owner': 'fs',
+    'owner': 'airflow',
     'start_date': datetime(2019, 7, 29),
     'email_on_retry': False,
     'retries': 3,
